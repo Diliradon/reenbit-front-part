@@ -16,6 +16,12 @@
   }
 
   main {
-    @apply flex flex-col items-center justify-center min-h-screen p-4;
+    @apply flex flex-col items-center justify-center h-screen p-4;
+  }
+}
+
+@layer components {
+  .chat-section {
+    @apply flex items-center justify-center w-full h-full my-20;
   }
 }
