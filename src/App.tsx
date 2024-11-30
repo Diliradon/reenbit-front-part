@@ -1,3 +1,7 @@
 export const App = () => {
-  return <h1>Hello Reebit!</h1>;
+  return (
+    <main>
+      <h1>Hello, Reenbit</h1>
+    </main>
+  );
 };
