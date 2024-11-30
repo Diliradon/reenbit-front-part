@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
+  html {
+    @apply cursor-default;
+  }
+
+  body {
+    @apply bg-white;
+  }
+
+  main {
+    @apply flex flex-col items-center justify-center min-h-screen p-4;
+  }
+}

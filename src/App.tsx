@@ -1,3 +1,13 @@
+import { Outlet } from "react-router-dom";
+
+import { Header, Footer } from "./components";
+
 export const App = () => {
-  return <h1>Hello Reebit!</h1>;
+  return (
+    <main>
+      <Header />
+      <Outlet />
+      <Footer />
+    </main>
+  );
 };
