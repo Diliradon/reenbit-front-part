@@ -1,17 +1,29 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, Label, Input } from "@/components/ui";
+import { Button, Card, CardContent, Input, Label } from "@/components/ui";
 import { ROUTES } from "@/config-global";
 
-interface Props {
-  className?: string;
-}
+export const Activate = () => {
+  const { token } = useParams();
+  const navigate = useNavigate();
 
-export const Signin: React.FC<Props> = ({ className, ...props }) => {
+  useEffect(() => {
+    let timeouutId: NodeJS.Timeout;
+
+    if (!token) {
+      timeouutId = setTimeout(() => {
+        navigate(ROUTES.AUTH.SIGNIN);
+      }, 3000);
+    }
+
+    return () => {
+      clearTimeout(timeouutId);
+    };
+  }, [token, navigate]);
+
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className="flex flex-col gap-6">
       <Card className="overflow-hidden">
         <CardContent>
           <form className="p-6 md:p-8">
@@ -49,15 +61,11 @@ export const Signin: React.FC<Props> = ({ className, ...props }) => {
 
               <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border" />
 
-              <div className="text-center text-sm">
-                Don&apos;t have an account?{" "}
-                <Link
-                  to={ROUTES.AUTH.SIGNUP}
-                  className="underline underline-offset-4"
-                >
-                  Sign up
-                </Link>
-              </div>
+              {token && (
+                <div className="text-center text-sm">
+                  You have been successfully registered.
+                </div>
+              )}
             </div>
           </form>
         </CardContent>
