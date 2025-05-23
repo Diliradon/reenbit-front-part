@@ -44,7 +44,7 @@ const messages = [
 
 export const ChatsPage = () => {
   return (
-    <section className="chat-section border border-gray-200 rounded-lg">
+    <section className="chat-section border border-gray-200 rounded-lg max-w-6xl mx-auto">
       <div className="w-1/4 bg-white border-r h-full">
         <h2 className="text-xl font-bold p-4 border-b">Chat Web</h2>
         <div className="flex items-center p-4 border-b hover:bg-gray-50 cursor-pointer">

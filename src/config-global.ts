@@ -1,9 +1,9 @@
 export const ROUTES = {
-  HOME: "/",
+  HOME: "/home",
   AUTH: {
     ROOT: "/auth",
-    SIGNIN: "/signin",
-    SIGNUP: "/signup",
+    LOGIN: "/login",
+    REGISTER: "/register",
     FORGOT_PASSWORD: "/forgot-password",
     ACTIVATE: "/auth/activate/:token",
   },

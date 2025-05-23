@@ -1,4 +1,4 @@
 export { HomePage } from "./HomePage";
 export { ChatsPage } from "./ChatsPage";
-export { Signup } from "./auth/Signup";
-export { Signin } from "./auth/Signin";
+export { Register } from "./auth/Register";
+export { Login } from "./auth/Login";

@@ -14,8 +14,8 @@ instance.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn('Unauthorized access - token might be invalid or expired.')
       localStorage.removeItem('token')
-      if (window.location.pathname !== ROUTES.AUTH.SIGNIN) {
-        window.location.href = window.location.origin + ROUTES.AUTH.SIGNIN
+      if (window.location.pathname !== ROUTES.AUTH.LOGIN) {
+        window.location.href = window.location.origin + ROUTES.AUTH.LOGIN
       }
     }
 
