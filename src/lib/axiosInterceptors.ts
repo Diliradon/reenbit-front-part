@@ -12,8 +12,22 @@ instance.interceptors.response.use(
   },
   error => {
     if (error.response?.status === 401) {
-      console.warn('Unauthorized access - token might be invalid or expired.')
-      localStorage.removeItem('token')
+      const errorMessage = error.response?.data?.message || 'Unauthorized access';
+      
+      console.log('🚫 401 Error Details:', {
+        status: error.response.status,
+        message: errorMessage,
+        url: error.config?.url,
+        headers: error.config?.headers
+      });
+      
+      if (errorMessage.includes('expired') || errorMessage.includes('Invalid')) {
+        console.warn('Session expired - redirecting to login.')
+      } else {
+        console.warn('Unauthorized access - token might be invalid or expired.')
+      }
+      
+      localStorage.removeItem('authToken')
       if (window.location.pathname !== ROUTES.AUTH.LOGIN) {
         window.location.href = window.location.origin + ROUTES.AUTH.LOGIN
       }
@@ -27,7 +41,10 @@ instance.interceptors.request.use(
   config => {
     const token = getSessionToken()
     if (token) {
+      console.log('🔑 Token being sent:', token?.substring(0, 20) + '...')
       config.headers.Authorization = `Bearer ${token}`
+    } else {
+      console.warn('⚠️ No token found in localStorage')
     }
     return config
   },

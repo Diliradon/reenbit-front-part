@@ -1,5 +1,19 @@
 import { client } from "@/lib/axiosClient";
 
-export const getUsers = async () => {
-  return client.get("/users");
+export interface User {
+  userId: string;
+  firstName: string;
+  email: string;
+  activationToken: string | null;
+  createdAt: string;
+}
+
+export interface UserResponse {
+  message: string;
+  count: number;
+  users: User[];
+}
+
+export const getUsers = async (): Promise<UserResponse> => {
+  return client.get<UserResponse>("/users");
 };

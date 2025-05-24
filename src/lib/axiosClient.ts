@@ -1,9 +1,5 @@
-import { API_URL } from '@/config-global';
-import axios, { AxiosRequestConfig } from 'axios';
-
-const instance = axios.create({
-  baseURL: API_URL,
-});
+import instance from './axiosInterceptors';
+import { AxiosRequestConfig } from 'axios';
 
 export const client = {
   async get<T>(url: string, config?: AxiosRequestConfig) {
