@@ -6,12 +6,12 @@ import { User } from '@/api/user.api';
 export interface Message {
   messageId: string;
   sender: {
-    userId: string;
+    _id: string;
     firstName: string;
     email: string;
   };
   recipient: {
-    userId: string;
+    _id: string;
     firstName: string;
     email: string;
   };

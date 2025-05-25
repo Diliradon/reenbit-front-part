@@ -27,12 +27,12 @@ export interface ConversationsResponse {
 export interface ConversationMessage {
   messageId: string;
   sender: {
-    userId: string;
+    _id: string;
     firstName: string;
     email: string;
   };
   recipient: {
-    userId: string;
+    _id: string;
     firstName: string;
     email: string;
   };
@@ -66,6 +66,43 @@ export const getConversation = (userId: string) => {
   console.log('📞 Making conversation messages request for user:', userId);
   return client.get<ConversationMessagesResponse>(`/messages/conversation/${userId}`).catch(error => {
     console.error('❌ Conversation messages request failed:', error);
+    throw error;
+  });
+};
+
+// Delete a message
+export const deleteMessage = (messageId: string) => {
+  console.log('📞 Making delete message request for message:', messageId);
+  return client.delete(`/messages/${messageId}`).catch(error => {
+    console.error('❌ Delete message request failed:', error);
+    throw error;
+  });
+};
+
+// Get unread messages count
+export interface UnreadCountResponse {
+  message: string;
+  unreadCount: number;
+}
+
+export const getUnreadCount = () => {
+  console.log('📞 Making unread count request...');
+  return client.get<UnreadCountResponse>(`/messages/unread-count`).catch(error => {
+    console.error('❌ Unread count request failed:', error);
+    throw error;
+  });
+};
+
+// Get unread count for specific user conversation
+export interface UserUnreadCountResponse {
+  message: string;
+  unreadCount: number;
+}
+
+export const getUserUnreadCount = (userId: string) => {
+  console.log('📞 Making user unread count request for user:', userId);
+  return client.get<UserUnreadCountResponse>(`/messages/conversation/${userId}/unread-count`).catch(error => {
+    console.error('❌ User unread count request failed:', error);
     throw error;
   });
 };

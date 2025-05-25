@@ -3,9 +3,12 @@ import { useState, useEffect, useRef } from "react";
 import { User } from "@/api/user.api";
 import { useSocket } from "@/hooks/useSocket";
 import { Message as SocketMessage } from "@/services/socketService";
-import { getConversation, ConversationMessage } from "@/api/message.api";
+import { getConversation, ConversationMessage, deleteMessage } from "@/api/message.api";
 import { useUsersExceptMe } from "@/hooks/use-users-except-me";
 import { useMe } from "@/hooks/use-me";
+import { useUserUnreadCounts } from "@/hooks/use-user-unread-counts";
+import { Button, Input } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 export const ChatsPage = () => {
   const { data: users } = useUsersExceptMe();
@@ -17,6 +20,13 @@ export const ChatsPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Use the unread counts hook
+  const {
+    getUnreadCount,
+    incrementUnreadCount,
+    resetUnreadCount,
+  } = useUserUnreadCounts(users?.users || []);
+
   const {
     isConnected,
     onlineUsers,
@@ -27,35 +37,63 @@ export const ChatsPage = () => {
     startTyping,
     stopTyping,
     markMessagesRead,
-    setMessageHandlers
+    setMessageHandlers,
   } = useSocket();
+
+  // Handle message deletion
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await deleteMessage(messageId);
+      
+      // Remove the message from local state
+      setMessages(prev => prev.filter(msg => msg.messageId !== messageId));
+      
+      console.log("Message deleted successfully");
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      alert("Failed to delete message. Please try again.");
+    }
+  };
 
   // Set up message handlers
   useEffect(() => {
     setMessageHandlers({
       onNewMessage: (newMessage: SocketMessage) => {
-        setMessages(prev => [...prev, newMessage]);
-        
+        setMessages((prev) => [...prev, newMessage]);
+
+        // Increment unread count if message is from another user and not in current conversation
+        if (
+          newMessage.sender._id !== me?.user.userId &&
+          (!selectedUser || newMessage.sender._id !== selectedUser.userId)
+        ) {
+          incrementUnreadCount(newMessage.sender._id);
+        }
+
         // Auto-scroll to bottom
         setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 100);
       },
       onMessageSent: (data) => {
-        console.log('Message sent with ID:', data.messageId);
+        console.log("Message sent with ID:", data.messageId);
+
       },
       onMessageError: (error) => {
-        alert('Failed to send message: ' + error.error);
+        alert("Failed to send message: " + error.error);
       },
       onMessageNotification: (data) => {
         // Show notification for messages outside current conversation
-        if (selectedUser && data.conversationWith.userId !== selectedUser.userId) {
+        if (
+          selectedUser &&
+          data.conversationWith.userId !== selectedUser.userId
+        ) {
           // Could show a toast notification here
-          console.log('New message from:', data.conversationWith.firstName);
+          console.log("New message from:", data.conversationWith.firstName);
+          incrementUnreadCount(data.conversationWith.userId);
         }
-      }
+      },
     });
-  }, [setMessageHandlers, selectedUser]);
+  }, [setMessageHandlers, selectedUser, me?.user.userId, incrementUnreadCount]);
 
   // Handle user selection and conversation joining
   const handleSelectUser = (user: User) => {
@@ -69,11 +107,11 @@ export const ChatsPage = () => {
 
     // Join new conversation
     joinConversation(user.userId);
-    
-    // Mark messages as read when opening conversation
-    markMessagesRead(user.userId);
 
-    // TODO: Load conversation history from REST API
+    // Mark messages as read when opening conversation and reset unread count
+    markMessagesRead(user.userId);
+    resetUnreadCount(user.userId);
+
     // This would typically load previous messages from the backend
     loadConversationHistory(user.userId);
   };
@@ -81,25 +119,31 @@ export const ChatsPage = () => {
   // Load conversation history (placeholder - you'll need to implement the API call)
   const loadConversationHistory = async (userId: string) => {
     try {
-      console.log('Loading conversation history for user:', userId);
+      console.log("Loading conversation history for user:", userId);
       const response = await getConversation(userId);
-      
+
       // Convert API messages to SocketMessage format for consistency
-      const apiMessages: SocketMessage[] = response.data.map((msg: ConversationMessage) => ({
-        messageId: msg.messageId,
-        sender: msg.sender,
-        recipient: msg.recipient,
-        content: msg.content,
-        messageType: msg.messageType as 'text' | 'image' | 'file',
-        isRead: msg.isRead,
-        readAt: msg.readAt,
-        createdAt: msg.createdAt
-      }));
-      
+      const apiMessages: SocketMessage[] = response.data.map(
+        (msg: ConversationMessage) => ({
+          messageId: msg.messageId,
+          sender: msg.sender,
+          recipient: msg.recipient,
+          content: msg.content,
+          messageType: msg.messageType as "text" | "image" | "file",
+          isRead: msg.isRead,
+          readAt: msg.readAt,
+          createdAt: msg.createdAt,
+        })
+      );
+
       setMessages(apiMessages);
-      console.log('Loaded', apiMessages.length, 'messages from conversation history');
+      console.log(
+        "Loaded",
+        apiMessages.length,
+        "messages from conversation history"
+      );
     } catch (error) {
-      console.error('Error loading conversation history:', error);
+      console.error("Error loading conversation history:", error);
       // Don't show error to user for now, just log it
     }
   };
@@ -137,13 +181,17 @@ export const ChatsPage = () => {
 
   const handleSendMessage = () => {
     if (!selectedUser || !message.trim() || !isConnected) {
-      console.log('Cannot send message:', { selectedUser, message: message.trim(), isConnected });
+      console.log("Cannot send message:", {
+        selectedUser,
+        message: message.trim(),
+        isConnected,
+      });
       return;
     }
 
     // Send message via socket
     sendMessage(selectedUser.userId, message.trim());
-    
+
     // Clear input and stop typing indicator
     setMessage("");
     if (isTyping) {
@@ -153,7 +201,7 @@ export const ChatsPage = () => {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSendMessage();
     }
   };
@@ -171,7 +219,7 @@ export const ChatsPage = () => {
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Cleanup on unmount
@@ -187,8 +235,8 @@ export const ChatsPage = () => {
   }, []);
 
   return (
-    <section className="chat-section border border-gray-200 rounded-lg max-w-6xl mx-auto">
-      <div className="w-1/4 bg-white border-r h-full">
+    <section className="chat-section border border-gray-200 rounded-lg max-w-6xl h-5/6 mx-auto">
+      <div className="w-1/4 bg-white border-r h-full overflow-y-auto">
         <div className="p-4 border-b">
           <h2 className="text-xl font-bold">{me?.user.firstName}</h2>
           <div className="text-sm text-gray-500 mt-1">
@@ -199,38 +247,51 @@ export const ChatsPage = () => {
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center p-4 border-b hover:bg-gray-50 cursor-pointer overflow-x-hidden">
-          <input
+          <Input
             type="search"
             placeholder="Search for a user..."
             className="flex-1 p-2 border rounded-lg"
           />
         </div>
-        
-        <ul className="overflow-y-scroll h-full">
-          {users?.users.map((user, index) => (
-            <li
-              key={index}
-              className={`flex items-center p-4 border-b hover:bg-gray-50 cursor-pointer overflow-x-hidden ${
-                selectedUser?.userId === user.userId ? 'bg-blue-50 border-blue-200' : ''
-              }`}
-              onClick={() => handleSelectUser(user)}
-            >
-              <div className="relative">
-                {isUserOnline(user.userId) && (
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+
+        <ul className="overflow-y-auto h-full">
+          {users?.users.map((user) => {
+            const unreadCount = getUnreadCount(user.userId);
+            
+            return (
+              <li
+                key={user.userId}
+                className={cn(
+                  "flex items-center p-4 border-b hover:bg-green-50 cursor-pointer overflow-x-hidden",
+                  selectedUser?.userId === user.userId &&
+                    "bg-green-100 border-green-200"
                 )}
-              </div>
-              <div className="ml-4 flex-1">
-                <p className="font-medium">{user.firstName}</p>
-                <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                {isUserOnline(user.userId) && (
-                  <p className="text-xs text-green-600">Online</p>
-                )}
-              </div>
-            </li>
-          ))}
+                onClick={() => handleSelectUser(user)}
+              >
+                <div className="relative">
+                  {isUserOnline(user.userId) && (
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                  )}
+                </div>
+                <div className="ml-4 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{user.firstName}</p>
+                    {unreadCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                  {isUserOnline(user.userId) && (
+                    <p className="text-xs text-green-600">Online</p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
@@ -243,7 +304,7 @@ export const ChatsPage = () => {
                 <div className="ml-3">
                   <h3 className="font-medium">{selectedUser.firstName}</h3>
                   <p className="text-sm text-gray-500">
-                    {isUserOnline(selectedUser.userId) ? 'Online' : 'Offline'}
+                    {isUserOnline(selectedUser.userId) ? "Online" : "Offline"}
                   </p>
                 </div>
               </div>
@@ -251,52 +312,64 @@ export const ChatsPage = () => {
 
             {/* Messages area */}
             <div className="flex flex-col gap-4 p-4 bg-white overflow-y-scroll h-full flex-1">
-              {messages.map((msg, index) => (
+              {messages.map((msg) => (
                 <Message
-                  key={`${msg.messageId || index}`}
-                  type={msg.sender.userId === selectedUser.userId ? "autor" : "user"}
+                  key={msg.messageId}
+                  type={
+                    msg.sender.email !== me?.user.email ? "user" : "autor"
+                  }
                   name={msg.sender.firstName}
                   message={msg.content}
+                  messageId={msg.messageId}
+                  onDelete={handleDeleteMessage}
                 />
               ))}
-              
+
               {/* Typing indicator */}
               {isUserTypingInConversation() && (
                 <div className="flex items-center space-x-2 text-gray-500 text-sm">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
                   </div>
                   <span>{selectedUser.firstName} is typing...</span>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
 
             {/* Message input */}
             <div className="p-4 bg-gray-100 border-t flex items-center">
-              <input
+              <Input
                 type="text"
-                placeholder={isConnected ? "Type a message..." : "Connecting..."}
+                placeholder={
+                  isConnected ? "Type a message..." : "Connecting..."
+                }
                 className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring"
                 value={message}
                 onChange={handleChangeMessage}
                 onKeyPress={handleKeyPress}
                 disabled={!isConnected}
               />
-              <button
+              <Button
                 className={`ml-4 px-4 py-2 rounded-lg text-white ${
-                  isConnected && message.trim() 
-                    ? 'bg-blue-500 hover:bg-blue-600' 
-                    : 'bg-gray-400 cursor-not-allowed'
+                  isConnected && message.trim()
+                    ? "bg-blue-500 hover:bg-blue-600"
+                    : "bg-gray-400 cursor-not-allowed"
                 }`}
                 onClick={handleSendMessage}
                 disabled={!isConnected || !message.trim()}
               >
                 Send
-              </button>
+              </Button>
             </div>
           </>
         ) : (
@@ -305,7 +378,9 @@ export const ChatsPage = () => {
               <h3 className="text-lg font-medium mb-2">Welcome to Chat Web</h3>
               <p>Select a user to start chatting</p>
               {!isConnected && (
-                <p className="text-red-500 mt-2">Connecting to chat server...</p>
+                <p className="text-red-500 mt-2">
+                  Connecting to chat server...
+                </p>
               )}
             </div>
           </div>
