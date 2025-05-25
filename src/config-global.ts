@@ -1,5 +1,5 @@
 export const ROUTES = {
-  HOME: "/home",
+  HOME: "/",
   AUTH: {
     ROOT: "/auth",
     LOGIN: "/login",
@@ -11,3 +11,5 @@ export const ROUTES = {
 };
 
 export const API_URL = import.meta.env.VITE_BASE_URL;
+
+export const SOCKET_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:3000';

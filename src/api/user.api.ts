@@ -17,3 +17,7 @@ export interface UserResponse {
 export const getUsers = async (): Promise<UserResponse> => {
   return client.get<UserResponse>("/users");
 };
+
+export const getUserById = async (userId: string): Promise<User> => {
+  return client.get<User>(`/users/${userId}`);
+};
