@@ -14,10 +14,23 @@ export interface UserResponse {
   users: User[];
 }
 
+export interface MeResponse {
+  message: string;
+  user: User;
+}
+
 export const getUsers = async (): Promise<UserResponse> => {
   return client.get<UserResponse>("/users");
 };
 
 export const getUserById = async (userId: string): Promise<User> => {
   return client.get<User>(`/users/${userId}`);
+};
+
+export const getUsersExceptMe = async (): Promise<UserResponse> => {
+  return client.get<UserResponse>("/users/others");
+};
+
+export const getMe = async (): Promise<MeResponse> => {
+  return client.get<MeResponse>("/users/me");
 };

@@ -1,15 +1,15 @@
-import { useUsers } from "@/hooks/use-users";
-import { Avatar } from "../components/Avatar";
 import { Message } from "../components/Message";
-import avatar from "../images/avatar-1.png";
 import { useState, useEffect, useRef } from "react";
 import { User } from "@/api/user.api";
 import { useSocket } from "@/hooks/useSocket";
 import { Message as SocketMessage } from "@/services/socketService";
 import { getConversation, ConversationMessage } from "@/api/message.api";
+import { useUsersExceptMe } from "@/hooks/use-users-except-me";
+import { useMe } from "@/hooks/use-me";
 
 export const ChatsPage = () => {
-  const { data: users } = useUsers();
+  const { data: users } = useUsersExceptMe();
+  const { data: me } = useMe();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<SocketMessage[]>([]);
@@ -190,7 +190,7 @@ export const ChatsPage = () => {
     <section className="chat-section border border-gray-200 rounded-lg max-w-6xl mx-auto">
       <div className="w-1/4 bg-white border-r h-full">
         <div className="p-4 border-b">
-          <h2 className="text-xl font-bold">Chat Web</h2>
+          <h2 className="text-xl font-bold">{me?.user.firstName}</h2>
           <div className="text-sm text-gray-500 mt-1">
             {isConnected ? (
               <span className="text-green-600">🟢 Connected</span>
@@ -218,7 +218,6 @@ export const ChatsPage = () => {
               onClick={() => handleSelectUser(user)}
             >
               <div className="relative">
-                <Avatar srcImg={avatar} altImg={user.firstName} />
                 {isUserOnline(user.userId) && (
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                 )}
@@ -241,7 +240,6 @@ export const ChatsPage = () => {
             {/* Chat header */}
             <div className="p-4 bg-white border-b">
               <div className="flex items-center">
-                <Avatar srcImg={avatar} altImg={selectedUser.firstName} />
                 <div className="ml-3">
                   <h3 className="font-medium">{selectedUser.firstName}</h3>
                   <p className="text-sm text-gray-500">
