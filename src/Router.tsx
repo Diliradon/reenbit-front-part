@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "react-query";
 import { App } from "./App";
 import { ROUTES } from "./config-global";
 import { NotFoundPage } from "./pages/NotFoundPage";
-import { ChatsPage, HomePage, Register, Login } from "./pages";
+import { ChatsPage, HomePage, Register, Login, ChatAIPage } from "./pages";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -37,6 +37,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <ChatsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path={ROUTES.CHAT_AI} 
+          element={
+            <ProtectedRoute>
+              <ChatAIPage />
             </ProtectedRoute>
           } 
         />

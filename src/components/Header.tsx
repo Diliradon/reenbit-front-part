@@ -58,6 +58,19 @@ export const Header = () => {
                 CHATS
               </NavLink>
             </li>
+            <li>
+              <NavLink
+                to={ROUTES.CHAT_AI}
+                className={({ isActive }) =>
+                  cn(
+                    isActive && "text-[#409998] ",
+                    "block px-1.5 py-2 md:py-2 md:px-3 border-gray-100 "
+                  )
+                }
+              >
+                CHAT AI
+              </NavLink>
+            </li>
             <li className="ml-auto">
               <button
                 onClick={handleLogout}

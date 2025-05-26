@@ -8,6 +8,7 @@ export const ROUTES = {
     ACTIVATE: "/auth/activate/:token",
   },
   CHATS: "/chats",
+  CHAT_AI: "/chat-ai",
 };
 
 export const API_URL = import.meta.env.VITE_BASE_URL;

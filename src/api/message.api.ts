@@ -108,3 +108,20 @@ export const getUserUnreadCount = (userId: string) => {
     throw error;
   });
 };
+
+// AI Chat API
+export interface AIMessageRequest {
+  userMessage: string;
+}
+
+export interface AIMessageResponse {
+  response: string;
+}
+
+export const sendAIMessage = (userMessage: string) => {
+  console.log('📞 Making AI message request...');
+  return client.post<AIMessageResponse>('/chat/ai', { userMessage }).catch(error => {
+    console.error('❌ AI message request failed:', error);
+    throw error;
+  });
+};
