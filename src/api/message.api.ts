@@ -1,18 +1,15 @@
 import { client } from "@/lib/axiosClient";
 
 export interface Conversation {
-  conversationWith: {
-    userId: string;
+  user: {
+    _id: string;
     firstName: string;
     email: string;
   };
   lastMessage: {
-    _id: string;
     content: string;
     createdAt: string;
-    isRead: boolean;
-    sender: string;
-    recipient: string;
+    messageType: string;
   };
   unreadCount: number;
 }
@@ -21,6 +18,7 @@ export interface ConversationsResponse {
   message: string;
   data: Conversation[];
   count: number;
+  searchQuery?: string;
 }
 
 // Interface for individual messages in a conversation
@@ -54,9 +52,13 @@ export interface ConversationMessagesResponse {
   };
 }
 
-export const getConversations = () => {
-  console.log('📞 Making conversations request...');
-  return client.get<ConversationsResponse>(`/messages/conversations`).catch(error => {
+export const getConversations = (searchQuery?: string) => {
+  console.log('📞 Making conversations request...', searchQuery ? `with search: ${searchQuery}` : '');
+  const url = searchQuery 
+    ? `/messages/conversations?query=${encodeURIComponent(searchQuery)}`
+    : `/messages/conversations`;
+  
+  return client.get<ConversationsResponse>(url).catch(error => {
     console.error('❌ Conversations request failed:', error);
     throw error;
   });

@@ -1,14 +1,21 @@
 import { Message } from "../components/Message";
+import { ConversationItem } from "../components/ConversationItem";
 import { useState, useEffect, useRef } from "react";
 import { User } from "@/api/user.api";
 import { useSocket } from "@/hooks/useSocket";
 import { Message as SocketMessage } from "@/services/socketService";
-import { getConversation, ConversationMessage, deleteMessage } from "@/api/message.api";
+import {
+  getConversation,
+  ConversationMessage,
+  deleteMessage,
+} from "@/api/message.api";
 import { useUsersExceptMe } from "@/hooks/use-users-except-me";
 import { useMe } from "@/hooks/use-me";
 import { useUserUnreadCounts } from "@/hooks/use-user-unread-counts";
+import { useGetConversations } from "@/hooks/use-conversations";
 import { Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { ChevronDown } from "lucide-react";
 
 export const ChatsPage = () => {
   const { data: users } = useUsersExceptMe();
@@ -17,15 +24,37 @@ export const ChatsPage = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<SocketMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get conversations with search
+  const { data: conversations } = useGetConversations(debouncedSearchQuery);
+
+  // Debounce search query
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   // Use the unread counts hook
-  const {
-    getUnreadCount,
-    incrementUnreadCount,
-    resetUnreadCount,
-  } = useUserUnreadCounts(users?.users || []);
+  const { getUnreadCount, incrementUnreadCount, resetUnreadCount } =
+    useUserUnreadCounts(users?.users || []);
 
   const {
     isConnected,
@@ -44,10 +73,10 @@ export const ChatsPage = () => {
   const handleDeleteMessage = async (messageId: string) => {
     try {
       await deleteMessage(messageId);
-      
+
       // Remove the message from local state
-      setMessages(prev => prev.filter(msg => msg.messageId !== messageId));
-      
+      setMessages((prev) => prev.filter((msg) => msg.messageId !== messageId));
+
       console.log("Message deleted successfully");
     } catch (error) {
       console.error("Error deleting message:", error);
@@ -76,7 +105,6 @@ export const ChatsPage = () => {
       },
       onMessageSent: (data) => {
         console.log("Message sent with ID:", data.messageId);
-
       },
       onMessageError: (error) => {
         alert("Failed to send message: " + error.error);
@@ -234,9 +262,26 @@ export const ChatsPage = () => {
     };
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <section className="chat-section border border-gray-200 rounded-lg max-w-6xl h-5/6 mx-auto">
-      <div className="w-1/4 bg-white border-r h-full overflow-y-auto">
+      <div className="w-1/4 bg-white border-r h-full flex flex-col overflow-visible">
         <div className="p-4 border-b">
           <h2 className="text-xl font-bold">{me?.user.firstName}</h2>
           <div className="text-sm text-gray-500 mt-1">
@@ -248,50 +293,116 @@ export const ChatsPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center p-4 border-b hover:bg-gray-50 cursor-pointer overflow-x-hidden">
+        <div className="flex flex-col gap-4 items-center p-4 border-b hover:bg-gray-50 cursor-pointer">
           <Input
             type="search"
-            placeholder="Search for a user..."
+            placeholder={
+              searchQuery
+                ? "Searching conversations..."
+                : "Search conversations by name..."
+            }
             className="flex-1 p-2 border rounded-lg"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
+          <div className="relative w-full" ref={dropdownRef}>
+            <Button
+              className="w-full flex items-center justify-between"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            >
+              Start new conversation
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  isDropdownOpen && "rotate-180"
+                )}
+              />
+            </Button>
+
+            {/* Dropdown */}
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 z-[9999] bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1">
+                {users?.users.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    <p className="text-sm">No users available</p>
+                  </div>
+                ) : (
+                  <ul>
+                    {users?.users.map((user) => {
+                      const unreadCount = getUnreadCount(user.userId);
+                      const isSelected = selectedUser?.userId === user.userId;
+
+                      return (
+                        <ConversationItem
+                          key={user.userId}
+                          user={{
+                            _id: user.userId,
+                            firstName: user.firstName,
+                            email: user.email,
+                          }}
+                          unreadCount={unreadCount}
+                          isSelected={isSelected}
+                          isOnline={isUserOnline(user.userId)}
+                          showAvatar={true}
+                          onClick={() => {
+                            handleSelectUser({
+                              userId: user.userId,
+                              firstName: user.firstName,
+                              email: user.email,
+                              activationToken: null,
+                              createdAt: "",
+                            } as User);
+                            setIsDropdownOpen(false);
+                          }}
+                        />
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        <ul className="overflow-y-auto h-full">
-          {users?.users.map((user) => {
-            const unreadCount = getUnreadCount(user.userId);
-            
+        <ul className="overflow-y-auto flex-1">
+          {conversations?.data.map((conversation) => {
+            const unreadCount = getUnreadCount(conversation.user._id);
+
             return (
-              <li
-                key={user.userId}
-                className={cn(
-                  "flex items-center p-4 border-b hover:bg-green-50 cursor-pointer overflow-x-hidden",
-                  selectedUser?.userId === user.userId &&
-                    "bg-green-100 border-green-200"
-                )}
-                onClick={() => handleSelectUser(user)}
-              >
-                <div className="relative">
-                  {isUserOnline(user.userId) && (
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                  )}
-                </div>
-                <div className="ml-4 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">{user.firstName}</p>
-                    {unreadCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                  {isUserOnline(user.userId) && (
-                    <p className="text-xs text-green-600">Online</p>
-                  )}
-                </div>
-              </li>
+              <ConversationItem
+                key={conversation.user._id}
+                user={conversation.user}
+                lastMessage={conversation.lastMessage}
+                unreadCount={unreadCount}
+                isSelected={selectedUser?.userId === conversation.user._id}
+                isOnline={isUserOnline(conversation.user._id)}
+                onClick={() =>
+                  handleSelectUser({
+                    userId: conversation.user._id,
+                    firstName: conversation.user.firstName,
+                    email: conversation.user.email,
+                    activationToken: null,
+                    createdAt: "",
+                  } as User)
+                }
+              />
             );
           })}
+
+          {conversations?.data.length === 0 && (
+            <li className="flex items-center justify-center p-8 text-gray-500">
+              <div className="text-center">
+                <p className="text-sm">
+                  {searchQuery
+                    ? `No conversations found for "${searchQuery}"`
+                    : "No conversations yet"}
+                </p>
+                {searchQuery && (
+                  <p className="text-xs mt-1">Try a different search term</p>
+                )}
+              </div>
+            </li>
+          )}
         </ul>
       </div>
 
@@ -315,9 +426,7 @@ export const ChatsPage = () => {
               {messages.map((msg) => (
                 <Message
                   key={msg.messageId}
-                  type={
-                    msg.sender.email !== me?.user.email ? "user" : "autor"
-                  }
+                  type={msg.sender.email !== me?.user.email ? "user" : "autor"}
                   name={msg.sender.firstName}
                   message={msg.content}
                   messageId={msg.messageId}

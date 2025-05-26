@@ -109,10 +109,6 @@ export const Login: React.FC<Props> = ({ className, ...props }) => {
               </form>
             </CardContent>
           </Card>
-          <div className="text-balance text-center text-xs text-gray-500 [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-blue-600">
-            By clicking continue, you agree to our{" "}
-            <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
-          </div>
         </main>
       </div>
     </div>
