@@ -1,9 +1,18 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { ROUTES } from "../config-global";
 import { cn } from "../lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Header = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate(ROUTES.AUTH.LOGIN);
+  };
+
   return (
     <header className="bg-white border-gray-200 dark:bg-blue-200 rounded-lg shadow m-4 mb-0 fixed top-0 left-0 right-0 z-20">
       <nav className="flex justify-between items-center p-2 md:p-4 lg:p-6">
@@ -22,13 +31,13 @@ export const Header = () => {
         </Link>
 
         <div className="items-center justify-between w-full flex md:w-auto">
-          <ul className="flex font-medium flex-row md:mt-0 md:space-x-8">
+          <ul className="flex font-medium flex-row md:mt-0 md:space-x-8 flex-1">
             <li>
               <NavLink
                 to={ROUTES.HOME}
                 className={({ isActive }) =>
                   cn(
-                    isActive && "text-blue-700",
+                    isActive && "text-[#409998]",
                     "block px-1.5 py-2 md:py-2 md:px-3 border-gray-100"
                   )
                 }
@@ -41,7 +50,7 @@ export const Header = () => {
                 to={ROUTES.CHATS}
                 className={({ isActive }) =>
                   cn(
-                    isActive && "text-blue-700 ",
+                    isActive && "text-[#409998] ",
                     "block px-1.5 py-2 md:py-2 md:px-3 border-gray-100 "
                   )
                 }
@@ -49,24 +58,28 @@ export const Header = () => {
                 CHATS
               </NavLink>
             </li>
+            <li>
+              <NavLink
+                to={ROUTES.CHAT_AI}
+                className={({ isActive }) =>
+                  cn(
+                    isActive && "text-[#409998] ",
+                    "block px-1.5 py-2 md:py-2 md:px-3 border-gray-100 "
+                  )
+                }
+              >
+                CHAT AI
+              </NavLink>
+            </li>
+            <li className="ml-auto">
+              <button
+                onClick={handleLogout}
+                className="px-1.5 py-2 md:py-2 md:px-3 border-gray-100 hover:text-[#409998] text-red-600"
+              >
+                LOGOUT
+              </button>
+            </li>
           </ul>
-        </div>
-
-        <div className="flex items-center md:order-2 space-x-1 md:space-x-2 rtl:space-x-reverse">
-          <NavLink
-            to={ROUTES.SIGNIN}
-            className={cn(
-              "text-gray-800 bg-gray-700 dark:text-white hover:bg-gray-50 focus:ring-4 font-medium rounded-lg text-sm px-4 py-2 md:px-5 md:py-2.5 dark:hover:bg-gray-700"
-            )}
-          >
-            SIGNIN
-          </NavLink>
-          <NavLink
-            to={ROUTES.SIGNUP}
-            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 font-medium rounded-lg text-sm px-4 py-2 md:px-5 md:py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 "
-          >
-            SIGNUP
-          </NavLink>
         </div>
       </nav>
     </header>
